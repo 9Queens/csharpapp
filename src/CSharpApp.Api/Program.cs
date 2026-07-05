@@ -21,6 +21,9 @@ if (app.Environment.IsDevelopment())
 
 //app.UseHttpsRedirection();
 
+// Performance logging middleware
+app.UseMiddleware<CSharpApp.Api.Middleware.PerformanceLoggingMiddleware>();
+
 var versionedEndpointRouteBuilder = app.NewVersionedApi();
 
 versionedEndpointRouteBuilder.MapGet("api/v{version:apiVersion}/products", async (IProductsService productsService) =>

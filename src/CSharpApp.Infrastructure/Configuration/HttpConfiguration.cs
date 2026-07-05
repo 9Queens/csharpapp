@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using CSharpApp.Application.Categories;
 using CSharpApp.Application.Products;
 using CSharpApp.Infrastructure.Authentication;
+using CSharpApp.Infrastructure.Http;
 using CSharpApp.Core.Interfaces;
 
 namespace CSharpApp.Infrastructure.Configuration;
@@ -17,6 +18,7 @@ public static class HttpConfiguration
         services.AddMemoryCache();
         services.AddTransient<AuthenticationDelegatingHandler>();
         services.AddTransient<ITokenService, TokenService>();
+        services.AddTransient<HttpClientMetricsHandler>();
 
         // Register a typed HttpClient for ProductsService using IHttpClientFactory
         services.AddHttpClient<IProductsService, ProductsService>((sp, client) =>
@@ -35,7 +37,8 @@ public static class HttpConfiguration
                 client.Timeout = TimeSpan.FromSeconds(httpSettings.LifeTime);
             }
         })
-        .AddHttpMessageHandler<AuthenticationDelegatingHandler>();
+        .AddHttpMessageHandler<AuthenticationDelegatingHandler>()
+        .AddHttpMessageHandler<HttpClientMetricsHandler>();
 
         // Register typed client for categories
         services.AddHttpClient<ICategoriesService, CategoriesService>((sp, client) =>
@@ -53,7 +56,8 @@ public static class HttpConfiguration
                 client.Timeout = TimeSpan.FromSeconds(httpSettings.LifeTime);
             }
         })
-        .AddHttpMessageHandler<AuthenticationDelegatingHandler>();
+        .AddHttpMessageHandler<AuthenticationDelegatingHandler>()
+        .AddHttpMessageHandler<HttpClientMetricsHandler>();
 
         return services;
     }
