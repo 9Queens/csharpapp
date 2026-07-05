@@ -4,6 +4,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using CSharpApp.Application.Categories;
 using CSharpApp.Application.Products;
+using CSharpApp.Infrastructure.Authentication;
+using CSharpApp.Core.Interfaces;
 
 namespace CSharpApp.Infrastructure.Configuration;
 
@@ -11,6 +13,11 @@ public static class HttpConfiguration
 {
     public static IServiceCollection AddHttpConfiguration(this IServiceCollection services, IConfiguration configuration)
     {
+        // Register token service, memory cache and authentication handler
+        services.AddMemoryCache();
+        services.AddTransient<AuthenticationDelegatingHandler>();
+        services.AddTransient<ITokenService, TokenService>();
+
         // Register a typed HttpClient for ProductsService using IHttpClientFactory
         services.AddHttpClient<IProductsService, ProductsService>((sp, client) =>
         {
@@ -27,7 +34,8 @@ public static class HttpConfiguration
             {
                 client.Timeout = TimeSpan.FromSeconds(httpSettings.LifeTime);
             }
-        });
+        })
+        .AddHttpMessageHandler<AuthenticationDelegatingHandler>();
 
         // Register typed client for categories
         services.AddHttpClient<ICategoriesService, CategoriesService>((sp, client) =>
@@ -44,7 +52,8 @@ public static class HttpConfiguration
             {
                 client.Timeout = TimeSpan.FromSeconds(httpSettings.LifeTime);
             }
-        });
+        })
+        .AddHttpMessageHandler<AuthenticationDelegatingHandler>();
 
         return services;
     }
