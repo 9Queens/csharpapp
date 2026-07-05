@@ -58,4 +58,39 @@ versionedEndpointRouteBuilder.MapPost("api/v{version:apiVersion}/products", asyn
     .WithName("CreateProduct")
     .HasApiVersion(1.0);
 
+versionedEndpointRouteBuilder.MapGet("api/v{version:apiVersion}/categories", async (ICategoriesService categoriesService) =>
+    {
+        var categories = await categoriesService.GetCategories();
+        return Results.Ok(categories);
+    })
+    .WithName("GetCategories")
+    .HasApiVersion(1.0);
+
+versionedEndpointRouteBuilder.MapGet("api/v{version:apiVersion}/categories/{id}", async (ICategoriesService categoriesService, int id, CancellationToken ct) =>
+    {
+        var category = await categoriesService.GetCategoryById(id, ct);
+        return category is null ? Results.NotFound() : Results.Ok(category);
+    })
+    .WithName("GetCategoryById")
+    .HasApiVersion(1.0);
+
+versionedEndpointRouteBuilder.MapPost("api/v{version:apiVersion}/categories", async (ICategoriesService categoriesService, Category category, HttpContext http, CancellationToken ct) =>
+    {
+        if (category == null)
+            return Results.BadRequest();
+
+        // Basic validation
+        if (string.IsNullOrWhiteSpace(category.Name))
+            return Results.BadRequest("Invalid category payload");
+
+        var created = await categoriesService.CreateCategory(category, ct);
+        if (created == null)
+            return Results.StatusCode(StatusCodes.Status502BadGateway);
+
+        var location = $"/api/v1/categories/{created.Id}";
+        return Results.Created(location, created);
+    })
+    .WithName("CreateCategory")
+    .HasApiVersion(1.0);
+
 app.Run();
