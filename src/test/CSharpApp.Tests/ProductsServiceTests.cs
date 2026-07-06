@@ -48,7 +48,7 @@ public class ProductsServiceTests
     public async Task CreateProduct_ReturnsCreatedProduct_WhenSuccess()
     {
         // Arrange
-        var product = new CSharpApp.Core.Dtos.Product { Title = "New", Price = 50 };
+        var product = new CSharpApp.Core.Dtos.Product { Title = "New", Price = 50m };
         var responseJson = "{ \"id\": 10, \"title\": \"New\", \"price\": 50 }";
 
         var handler = new DelegatingHandlerStub((request, ct) =>

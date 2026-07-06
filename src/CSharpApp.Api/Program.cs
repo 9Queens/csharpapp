@@ -1,3 +1,9 @@
+using CSharpApp.Core.Dtos;
+using CSharpApp.Application;
+using CSharpApp.Infrastructure;
+using CSharpApp.Api;
+using CSharpApp.Api.Validation;
+
 var builder = WebApplication.CreateBuilder(args);
 
 var logger = new LoggerConfiguration().ReadFrom.Configuration(builder.Configuration).CreateLogger();
@@ -10,6 +16,11 @@ builder.Services.AddDefaultConfiguration(builder.Configuration);
 builder.Services.AddHttpConfiguration(builder.Configuration);
 builder.Services.AddProblemDetails();
 builder.Services.AddApiVersioning();
+
+// Register application and infrastructure services via extension helpers
+builder.Services.AddApiServices();
+builder.Services.AddApplicationServices();
+builder.Services.AddInfrastructureServices(builder.Configuration);
 
 var app = builder.Build();
 
@@ -26,9 +37,9 @@ app.UseMiddleware<CSharpApp.Api.Middleware.PerformanceLoggingMiddleware>();
 
 var versionedEndpointRouteBuilder = app.NewVersionedApi();
 
-versionedEndpointRouteBuilder.MapGet("api/v{version:apiVersion}/products", async (IProductsService productsService) =>
+versionedEndpointRouteBuilder.MapGet("api/v{version:apiVersion}/products", async (IProductsService productsService, int? offset, int? limit) =>
     {
-        var products = await productsService.GetProducts();
+        var products = await productsService.GetProducts(offset, limit);
         return Results.Ok(products);
     })
     .WithName("GetProducts")
@@ -42,14 +53,22 @@ versionedEndpointRouteBuilder.MapGet("api/v{version:apiVersion}/products/{id}", 
     .WithName("GetProductById")
     .HasApiVersion(1.0);
 
-versionedEndpointRouteBuilder.MapPost("api/v{version:apiVersion}/products", async (IProductsService productsService, Product product, HttpContext http, CancellationToken ct) =>
+versionedEndpointRouteBuilder.MapPost("api/v{version:apiVersion}/products", async (IProductsService productsService, CSharpApp.Api.Validation.ICreateProductValidator apiValidator, CSharpApp.Application.Products.IProductValidator validator, CSharpApp.Application.Products.IProductMapper mapper, CreateProductRequestDto request, HttpContext http, CancellationToken ct) =>
     {
-        if (product == null)
+        if (request == null)
             return Results.BadRequest();
 
-        // Basic validation
-        if (string.IsNullOrWhiteSpace(product.Title) || (product.Price.HasValue && product.Price <= 0))
-            return Results.BadRequest("Invalid product payload");
+        // API-level validation (shape/format)
+        if (!apiValidator.Validate(request, out var apiErrors))
+            return Results.BadRequest(new { errors = apiErrors });
+
+        // Application/business validation
+        var validation = validator.ValidateForCreate(request);
+        if (!validation.IsValid)
+            return Results.BadRequest(new { errors = validation.Errors });
+
+        // Map request to domain product using mapper
+        var product = mapper.MapFromCreateRequest(request);
 
         var created = await productsService.CreateProduct(product, ct);
         if (created == null)
@@ -77,14 +96,21 @@ versionedEndpointRouteBuilder.MapGet("api/v{version:apiVersion}/categories/{id}"
     .WithName("GetCategoryById")
     .HasApiVersion(1.0);
 
-versionedEndpointRouteBuilder.MapPost("api/v{version:apiVersion}/categories", async (ICategoriesService categoriesService, Category category, HttpContext http, CancellationToken ct) =>
+versionedEndpointRouteBuilder.MapPost("api/v{version:apiVersion}/categories", async (ICategoriesService categoriesService, CSharpApp.Api.Validation.ICreateCategoryValidator apiCategoryValidator, CSharpApp.Application.Categories.Validation.ICategoryValidator categoryValidator, CSharpApp.Application.Categories.Mapping.ICategoryMapper mapper, CSharpApp.Core.Dtos.CreateCategoryRequestDto request, CancellationToken ct) =>
     {
-        if (category == null)
+        if (request == null)
             return Results.BadRequest();
 
-        // Basic validation
-        if (string.IsNullOrWhiteSpace(category.Name))
-            return Results.BadRequest("Invalid category payload");
+        // API-level validation
+        if (!apiCategoryValidator.Validate(request, out var apiErrors))
+            return Results.BadRequest(new { errors = apiErrors });
+
+        // Business validation
+        var businessValidation = categoryValidator.ValidateForCreate(request);
+        if (!businessValidation.IsValid)
+            return Results.BadRequest(new { errors = businessValidation.Errors });
+
+        var category = mapper.MapFromCreateRequest(request);
 
         var created = await categoriesService.CreateCategory(category, ct);
         if (created == null)
