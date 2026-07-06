@@ -16,7 +16,7 @@ services:
       - mock-upstream
 
   mock-upstream:
-    image: typicode/json-server:latest
+    image: clue/json-server:latest
     container_name: mock-upstream
     ports:
       - "3000:80"
@@ -37,4 +37,5 @@ services:
 networks:
   default:
     name: csharpapp_default
+
 
