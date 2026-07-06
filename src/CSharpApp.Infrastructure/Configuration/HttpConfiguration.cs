@@ -17,8 +17,17 @@ public static class HttpConfiguration
         // Register token service, memory cache and authentication handler
         services.AddMemoryCache();
         services.AddTransient<AuthenticationDelegatingHandler>();
-        services.AddTransient<ITokenService, TokenService>();
         services.AddTransient<HttpClientMetricsHandler>();
+
+        // Register HttpClient for TokenService
+        services.AddHttpClient<ITokenService, TokenService>((sp, client) =>
+        {
+            var rest = sp.GetRequiredService<IOptions<RestApiSettings>>().Value;
+            if (!string.IsNullOrWhiteSpace(rest.BaseUrl))
+            {
+                client.BaseAddress = new Uri(rest.BaseUrl);
+            }
+        });
 
         // Register a typed HttpClient for ProductsService using IHttpClientFactory
         services.AddHttpClient<IProductsService, ProductsService>((sp, client) =>

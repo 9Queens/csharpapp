@@ -43,7 +43,7 @@ public class TokenService : ITokenService
             throw new InvalidOperationException("Auth settings are not configured");
         }
 
-        var payload = new { username = _restApiSettings.Username, password = _restApiSettings.Password };
+        var payload = new { email = _restApiSettings.Username, password = _restApiSettings.Password };
         var json = JsonSerializer.Serialize(payload);
         using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
