@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CSharpApp.Application
@@ -7,6 +8,9 @@ namespace CSharpApp.Application
     {
         public static IServiceCollection AddApplicationServices(this IServiceCollection services)
         {
+            // Register MediatR with all handlers in this assembly
+            services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
+
             // Application-level validators, mappers and other services
             services.AddSingleton<Products.IProductValidator, Products.ProductBusinessValidator>();
             services.AddSingleton<Products.IProductMapper, Products.ProductMapper>();

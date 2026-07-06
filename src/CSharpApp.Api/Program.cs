@@ -3,6 +3,11 @@ using CSharpApp.Application;
 using CSharpApp.Infrastructure;
 using CSharpApp.Api;
 using CSharpApp.Api.Validation;
+using MediatR;
+using CSharpApp.Application.Products.Queries;
+using CSharpApp.Application.Products.Commands;
+using CSharpApp.Application.Categories.Queries;
+using CSharpApp.Application.Categories.Commands;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,23 +42,23 @@ app.UseMiddleware<CSharpApp.Api.Middleware.PerformanceLoggingMiddleware>();
 
 var versionedEndpointRouteBuilder = app.NewVersionedApi();
 
-versionedEndpointRouteBuilder.MapGet("api/v{version:apiVersion}/products", async (IProductsService productsService, int? offset, int? limit) =>
+versionedEndpointRouteBuilder.MapGet("api/v{version:apiVersion}/products", async (IMediator mediator, int? offset, int? limit) =>
     {
-        var products = await productsService.GetProducts(offset, limit);
+        var products = await mediator.Send(new GetProductsQuery(offset, limit));
         return Results.Ok(products);
     })
     .WithName("GetProducts")
     .HasApiVersion(1.0);
 
-versionedEndpointRouteBuilder.MapGet("api/v{version:apiVersion}/products/{id}", async (IProductsService productsService, int id, CancellationToken ct) =>
+versionedEndpointRouteBuilder.MapGet("api/v{version:apiVersion}/products/{id}", async (IMediator mediator, int id, CancellationToken ct) =>
     {
-        var product = await productsService.GetProductById(id, ct);
+        var product = await mediator.Send(new GetProductByIdQuery(id), ct);
         return product is null ? Results.NotFound() : Results.Ok(product);
     })
     .WithName("GetProductById")
     .HasApiVersion(1.0);
 
-versionedEndpointRouteBuilder.MapPost("api/v{version:apiVersion}/products", async (IProductsService productsService, CSharpApp.Api.Validation.ICreateProductValidator apiValidator, CSharpApp.Application.Products.IProductValidator validator, CSharpApp.Application.Products.IProductMapper mapper, CreateProductRequestDto request, HttpContext http, CancellationToken ct) =>
+versionedEndpointRouteBuilder.MapPost("api/v{version:apiVersion}/products", async (IMediator mediator, CSharpApp.Api.Validation.ICreateProductValidator apiValidator, CSharpApp.Application.Products.IProductValidator validator, CSharpApp.Application.Products.IProductMapper mapper, CreateProductRequestDto request, HttpContext http, CancellationToken ct) =>
     {
         if (request == null)
             return Results.BadRequest();
@@ -70,7 +75,7 @@ versionedEndpointRouteBuilder.MapPost("api/v{version:apiVersion}/products", asyn
         // Map request to domain product using mapper
         var product = mapper.MapFromCreateRequest(request);
 
-        var created = await productsService.CreateProduct(product, ct);
+        var created = await mediator.Send(new CreateProductCommand(product), ct);
         if (created == null)
             return Results.StatusCode(StatusCodes.Status502BadGateway);
 
@@ -80,23 +85,23 @@ versionedEndpointRouteBuilder.MapPost("api/v{version:apiVersion}/products", asyn
     .WithName("CreateProduct")
     .HasApiVersion(1.0);
 
-versionedEndpointRouteBuilder.MapGet("api/v{version:apiVersion}/categories", async (ICategoriesService categoriesService) =>
+versionedEndpointRouteBuilder.MapGet("api/v{version:apiVersion}/categories", async (IMediator mediator) =>
     {
-        var categories = await categoriesService.GetCategories();
+        var categories = await mediator.Send(new GetCategoriesQuery());
         return Results.Ok(categories);
     })
     .WithName("GetCategories")
     .HasApiVersion(1.0);
 
-versionedEndpointRouteBuilder.MapGet("api/v{version:apiVersion}/categories/{id}", async (ICategoriesService categoriesService, int id, CancellationToken ct) =>
+versionedEndpointRouteBuilder.MapGet("api/v{version:apiVersion}/categories/{id}", async (IMediator mediator, int id, CancellationToken ct) =>
     {
-        var category = await categoriesService.GetCategoryById(id, ct);
+        var category = await mediator.Send(new GetCategoryByIdQuery(id), ct);
         return category is null ? Results.NotFound() : Results.Ok(category);
     })
     .WithName("GetCategoryById")
     .HasApiVersion(1.0);
 
-versionedEndpointRouteBuilder.MapPost("api/v{version:apiVersion}/categories", async (ICategoriesService categoriesService, CSharpApp.Api.Validation.ICreateCategoryValidator apiCategoryValidator, CSharpApp.Application.Categories.Validation.ICategoryValidator categoryValidator, CSharpApp.Application.Categories.Mapping.ICategoryMapper mapper, CSharpApp.Core.Dtos.CreateCategoryRequestDto request, CancellationToken ct) =>
+versionedEndpointRouteBuilder.MapPost("api/v{version:apiVersion}/categories", async (IMediator mediator, CSharpApp.Api.Validation.ICreateCategoryValidator apiCategoryValidator, CSharpApp.Application.Categories.Validation.ICategoryValidator categoryValidator, CSharpApp.Application.Categories.Mapping.ICategoryMapper mapper, CSharpApp.Core.Dtos.CreateCategoryRequestDto request, CancellationToken ct) =>
     {
         if (request == null)
             return Results.BadRequest();
@@ -112,7 +117,7 @@ versionedEndpointRouteBuilder.MapPost("api/v{version:apiVersion}/categories", as
 
         var category = mapper.MapFromCreateRequest(request);
 
-        var created = await categoriesService.CreateCategory(category, ct);
+        var created = await mediator.Send(new CreateCategoryCommand(category), ct);
         if (created == null)
             return Results.StatusCode(StatusCodes.Status502BadGateway);
 
