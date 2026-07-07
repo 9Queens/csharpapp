@@ -6,10 +6,12 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using CSharpApp.Application.Products.Queries;
+using CSharpApp.Application.Products.Commands;
 
 namespace CSharpApp.Tests;
 
-public class ProductsServiceTests
+public class ProductQueryHandlerTests
 {
     [Fact]
     public async Task GetProductById_ReturnsProduct_WhenFound()
@@ -31,19 +33,23 @@ public class ProductsServiceTests
         };
 
         var options = Options.Create(new CSharpApp.Core.Settings.RestApiSettings { Products = "products" });
-        var logger = NullLogger<CSharpApp.Application.Products.ProductsService>.Instance;
+        var logger = NullLogger<GetProductByIdQueryHandler>.Instance;
 
-        var svc = new CSharpApp.Application.Products.ProductsService(httpClient, options, logger);
+        var queryHandler = new GetProductByIdQueryHandler(httpClient, options, logger);
+        var query = new GetProductByIdQuery(1);
 
         // Act
-        var result = await svc.GetProductById(1, CancellationToken.None);
+        var result = await queryHandler.Handle(query, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
         Assert.Equal(1, result!.Id);
         Assert.Equal("Test", result.Title);
     }
+}
 
+public class ProductCommandHandlerTests
+{
     [Fact]
     public async Task CreateProduct_ReturnsCreatedProduct_WhenSuccess()
     {
@@ -66,12 +72,13 @@ public class ProductsServiceTests
         };
 
         var options = Options.Create(new CSharpApp.Core.Settings.RestApiSettings { Products = "products" });
-        var logger = NullLogger<CSharpApp.Application.Products.ProductsService>.Instance;
+        var logger = NullLogger<CreateProductCommandHandler>.Instance;
 
-        var svc = new CSharpApp.Application.Products.ProductsService(httpClient, options, logger);
+        var commandHandler = new CreateProductCommandHandler(httpClient, options, logger);
+        var command = new CreateProductCommand(product);
 
         // Act
-        var created = await svc.CreateProduct(product, CancellationToken.None);
+        var created = await commandHandler.Handle(command, CancellationToken.None);
 
         // Assert
         Assert.NotNull(created);

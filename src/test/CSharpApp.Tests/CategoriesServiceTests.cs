@@ -6,10 +6,12 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using CSharpApp.Application.Categories.Queries;
+using CSharpApp.Application.Categories.Commands;
 
 namespace CSharpApp.Tests;
 
-public class CategoriesServiceTests
+public class CategoryQueryHandlerTests
 {
     [Fact]
     public async Task GetCategoryById_ReturnsCategory_WhenFound()
@@ -31,19 +33,23 @@ public class CategoriesServiceTests
         };
 
         var options = Options.Create(new CSharpApp.Core.Settings.RestApiSettings { Categories = "categories" });
-        var logger = NullLogger<CSharpApp.Application.Categories.CategoriesService>.Instance;
+        var logger = NullLogger<GetCategoryByIdQueryHandler>.Instance;
 
-        var svc = new CSharpApp.Application.Categories.CategoriesService(httpClient, options, logger);
+        var queryHandler = new GetCategoryByIdQueryHandler(httpClient, options, logger);
+        var query = new GetCategoryByIdQuery(2);
 
         // Act
-        var result = await svc.GetCategoryById(2, CancellationToken.None);
+        var result = await queryHandler.Handle(query, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
         Assert.Equal(2, result!.Id);
         Assert.Equal("Electronics", result.Name);
     }
+}
 
+public class CategoryCommandHandlerTests
+{
     [Fact]
     public async Task CreateCategory_ReturnsCreatedCategory_WhenSuccess()
     {
@@ -66,12 +72,13 @@ public class CategoriesServiceTests
         };
 
         var options = Options.Create(new CSharpApp.Core.Settings.RestApiSettings { Categories = "categories" });
-        var logger = NullLogger<CSharpApp.Application.Categories.CategoriesService>.Instance;
+        var logger = NullLogger<CreateCategoryCommandHandler>.Instance;
 
-        var svc = new CSharpApp.Application.Categories.CategoriesService(httpClient, options, logger);
+        var commandHandler = new CreateCategoryCommandHandler(httpClient, options, logger);
+        var command = new CreateCategoryCommand(category);
 
         // Act
-        var created = await svc.CreateCategory(category, CancellationToken.None);
+        var created = await commandHandler.Handle(command, CancellationToken.None);
 
         // Assert
         Assert.NotNull(created);
