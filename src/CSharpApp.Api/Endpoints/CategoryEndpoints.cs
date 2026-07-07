@@ -50,22 +50,15 @@ public static class CategoryEndpoints
         if (request == null)
             return Results.BadRequest(new { errors = new[] { "Request cannot be null" } });
 
-        try
-        {
-            var category = mapper.MapFromCreateRequest(request);
+        var category = mapper.MapFromCreateRequest(request);
 
-            // MediatR pipeline will automatically validate via FluentValidation behavior
-            var created = await mediator.Send(new CreateCategoryCommand(category), ct);
-            if (created == null)
-                return Results.StatusCode(StatusCodes.Status502BadGateway);
+        // MediatR pipeline will automatically validate via FluentValidation behavior
+        // ValidationException will be caught by GlobalExceptionHandlerMiddleware
+        var created = await mediator.Send(new CreateCategoryCommand(category), ct);
+        if (created == null)
+            return Results.StatusCode(StatusCodes.Status502BadGateway);
 
-            var location = $"/api/v1/categories/{created.Id}";
-            return Results.Created(location, created);
-        }
-        catch (FluentValidation.ValidationException ex)
-        {
-            var errors = ex.Errors.Select(e => e.ErrorMessage).ToList();
-            return Results.BadRequest(new { errors });
-        }
+        var location = $"/api/v1/categories/{created.Id}";
+        return Results.Created(location, created);
     }
 }

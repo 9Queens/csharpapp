@@ -31,6 +31,9 @@ if (app.Environment.IsDevelopment())
 
 //app.UseHttpsRedirection();
 
+// Global exception handling middleware (must be early in pipeline)
+app.UseMiddleware<CSharpApp.Api.Middleware.GlobalExceptionHandlerMiddleware>();
+
 // Performance logging middleware
 app.UseMiddleware<CSharpApp.Api.Middleware.PerformanceLoggingMiddleware>();
 

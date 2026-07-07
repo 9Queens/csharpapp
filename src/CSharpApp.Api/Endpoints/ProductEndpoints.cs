@@ -53,23 +53,16 @@ public static class ProductEndpoints
         if (request == null)
             return Results.BadRequest(new { errors = new[] { "Request cannot be null" } });
 
-        try
-        {
-            // Map request to domain product using mapper
-            var product = mapper.MapFromCreateRequest(request);
+        // Map request to domain product using mapper
+        var product = mapper.MapFromCreateRequest(request);
 
-            // MediatR pipeline will automatically validate via FluentValidation behavior
-            var created = await mediator.Send(new CreateProductCommand(product), ct);
-            if (created == null)
-                return Results.StatusCode(StatusCodes.Status502BadGateway);
+        // MediatR pipeline will automatically validate via FluentValidation behavior
+        // ValidationException will be caught by GlobalExceptionHandlerMiddleware
+        var created = await mediator.Send(new CreateProductCommand(product), ct);
+        if (created == null)
+            return Results.StatusCode(StatusCodes.Status502BadGateway);
 
-            var location = $"/api/v1/products/{created.Id}";
-            return Results.Created(location, created);
-        }
-        catch (FluentValidation.ValidationException ex)
-        {
-            var errors = ex.Errors.Select(e => e.ErrorMessage).ToList();
-            return Results.BadRequest(new { errors });
-        }
+        var location = $"/api/v1/products/{created.Id}";
+        return Results.Created(location, created);
     }
 }
