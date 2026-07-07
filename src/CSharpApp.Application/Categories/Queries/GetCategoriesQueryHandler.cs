@@ -1,6 +1,8 @@
 using MediatR;
+using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Net.Http;
 using System.Text.Json;
 using CSharpApp.Core.Dtos;
 using CSharpApp.Core.Settings;
@@ -9,16 +11,16 @@ namespace CSharpApp.Application.Categories.Queries;
 
 public class GetCategoriesQueryHandler : IRequestHandler<GetCategoriesQuery, IReadOnlyCollection<Category>>
 {
-    private readonly HttpClient _httpClient;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly RestApiSettings _restApiSettings;
     private readonly ILogger<GetCategoriesQueryHandler> _logger;
 
     public GetCategoriesQueryHandler(
-        HttpClient httpClient,
+        IHttpClientFactory httpClientFactory,
         IOptions<RestApiSettings> restApiSettings,
         ILogger<GetCategoriesQueryHandler> logger)
     {
-        _httpClient = httpClient;
+        _httpClientFactory = httpClientFactory;
         _restApiSettings = restApiSettings.Value;
         _logger = logger;
     }
@@ -27,9 +29,10 @@ public class GetCategoriesQueryHandler : IRequestHandler<GetCategoriesQuery, IRe
     {
         try
         {
+            var httpClient = _httpClientFactory.CreateClient("RestApiClient");
             var path = string.IsNullOrWhiteSpace(_restApiSettings.Categories) ? string.Empty : _restApiSettings.Categories;
 
-            var response = await _httpClient.GetAsync(path, cancellationToken);
+            var response = await httpClient.GetAsync(path, cancellationToken);
             response.EnsureSuccessStatusCode();
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
 

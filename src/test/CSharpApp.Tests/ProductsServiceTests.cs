@@ -3,8 +3,10 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using Xunit;
 using CSharpApp.Application.Products.Queries;
 using CSharpApp.Application.Products.Commands;
@@ -32,10 +34,13 @@ public class ProductQueryHandlerTests
             BaseAddress = new System.Uri("https://api.test/")
         };
 
+        var mockFactory = new Mock<IHttpClientFactory>();
+        mockFactory.Setup(f => f.CreateClient("RestApiClient")).Returns(httpClient);
+
         var options = Options.Create(new CSharpApp.Core.Settings.RestApiSettings { Products = "products" });
         var logger = NullLogger<GetProductByIdQueryHandler>.Instance;
 
-        var queryHandler = new GetProductByIdQueryHandler(httpClient, options, logger);
+        var queryHandler = new GetProductByIdQueryHandler(mockFactory.Object, options, logger);
         var query = new GetProductByIdQuery(1);
 
         // Act
@@ -71,10 +76,13 @@ public class ProductCommandHandlerTests
             BaseAddress = new System.Uri("https://api.test/")
         };
 
+        var mockFactory = new Mock<IHttpClientFactory>();
+        mockFactory.Setup(f => f.CreateClient("RestApiClient")).Returns(httpClient);
+
         var options = Options.Create(new CSharpApp.Core.Settings.RestApiSettings { Products = "products" });
         var logger = NullLogger<CreateProductCommandHandler>.Instance;
 
-        var commandHandler = new CreateProductCommandHandler(httpClient, options, logger);
+        var commandHandler = new CreateProductCommandHandler(mockFactory.Object, options, logger);
         var command = new CreateProductCommand(product);
 
         // Act

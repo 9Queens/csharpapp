@@ -1,6 +1,8 @@
 using MediatR;
+using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Net.Http;
 using System.Text.Json;
 using CSharpApp.Core.Dtos;
 using CSharpApp.Core.Settings;
@@ -9,16 +11,16 @@ namespace CSharpApp.Application.Products.Queries;
 
 public class GetProductsQueryHandler : IRequestHandler<GetProductsQuery, IReadOnlyCollection<Product>>
 {
-    private readonly HttpClient _httpClient;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly RestApiSettings _restApiSettings;
     private readonly ILogger<GetProductsQueryHandler> _logger;
 
     public GetProductsQueryHandler(
-        HttpClient httpClient,
+        IHttpClientFactory httpClientFactory,
         IOptions<RestApiSettings> restApiSettings,
         ILogger<GetProductsQueryHandler> logger)
     {
-        _httpClient = httpClient;
+        _httpClientFactory = httpClientFactory;
         _restApiSettings = restApiSettings.Value;
         _logger = logger;
     }
@@ -27,6 +29,7 @@ public class GetProductsQueryHandler : IRequestHandler<GetProductsQuery, IReadOn
     {
         try
         {
+            var httpClient = _httpClientFactory.CreateClient("RestApiClient");
             var path = string.IsNullOrWhiteSpace(_restApiSettings.Products) ? string.Empty : _restApiSettings.Products;
 
             if (request.Offset.HasValue || request.Limit.HasValue)
@@ -39,7 +42,7 @@ public class GetProductsQueryHandler : IRequestHandler<GetProductsQuery, IReadOn
                 if (!string.IsNullOrEmpty(qs)) path = string.IsNullOrEmpty(path) ? "?" + qs : path + "?" + qs;
             }
 
-            var response = await _httpClient.GetAsync(path, cancellationToken);
+            var response = await httpClient.GetAsync(path, cancellationToken);
             response.EnsureSuccessStatusCode();
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
 

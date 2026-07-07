@@ -1,6 +1,8 @@
 using MediatR;
+using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Net.Http;
 using System.Text.Json;
 using CSharpApp.Core.Dtos;
 using CSharpApp.Core.Settings;
@@ -9,18 +11,18 @@ namespace CSharpApp.Application.Products.Commands;
 
 public class CreateProductCommandHandler : IRequestHandler<CreateProductCommand, Product?>
 {
-    private readonly HttpClient _httpClient;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly RestApiSettings _restApiSettings;
     private readonly ILogger<CreateProductCommandHandler> _logger;
     private readonly IUpstreamProductMapper? _upstreamMapper;
 
     public CreateProductCommandHandler(
-        HttpClient httpClient,
+        IHttpClientFactory httpClientFactory,
         IOptions<RestApiSettings> restApiSettings,
         ILogger<CreateProductCommandHandler> logger,
         IUpstreamProductMapper? upstreamMapper = null)
     {
-        _httpClient = httpClient;
+        _httpClientFactory = httpClientFactory;
         _restApiSettings = restApiSettings.Value;
         _logger = logger;
         _upstreamMapper = upstreamMapper;
@@ -30,6 +32,7 @@ public class CreateProductCommandHandler : IRequestHandler<CreateProductCommand,
     {
         try
         {
+            var httpClient = _httpClientFactory.CreateClient("RestApiClient");
             var product = request.Product;
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
@@ -51,7 +54,7 @@ public class CreateProductCommandHandler : IRequestHandler<CreateProductCommand,
 
             var path = string.IsNullOrWhiteSpace(_restApiSettings.Products) ? string.Empty : _restApiSettings.Products;
 
-            var response = await _httpClient.PostAsync(path, content, cancellationToken);
+            var response = await httpClient.PostAsync(path, content, cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {

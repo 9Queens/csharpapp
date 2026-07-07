@@ -1,6 +1,8 @@
 using MediatR;
+using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Net.Http;
 using System.Text.Json;
 using CSharpApp.Core.Dtos;
 using CSharpApp.Core.Settings;
@@ -9,16 +11,16 @@ namespace CSharpApp.Application.Categories.Commands;
 
 public class CreateCategoryCommandHandler : IRequestHandler<CreateCategoryCommand, Category?>
 {
-    private readonly HttpClient _httpClient;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly RestApiSettings _restApiSettings;
     private readonly ILogger<CreateCategoryCommandHandler> _logger;
 
     public CreateCategoryCommandHandler(
-        HttpClient httpClient,
+        IHttpClientFactory httpClientFactory,
         IOptions<RestApiSettings> restApiSettings,
         ILogger<CreateCategoryCommandHandler> logger)
     {
-        _httpClient = httpClient;
+        _httpClientFactory = httpClientFactory;
         _restApiSettings = restApiSettings.Value;
         _logger = logger;
     }
@@ -27,6 +29,7 @@ public class CreateCategoryCommandHandler : IRequestHandler<CreateCategoryComman
     {
         try
         {
+            var httpClient = _httpClientFactory.CreateClient("RestApiClient");
             var category = request.Category;
 
             if (category is null)
@@ -38,7 +41,7 @@ public class CreateCategoryCommandHandler : IRequestHandler<CreateCategoryComman
 
             var path = string.IsNullOrWhiteSpace(_restApiSettings.Categories) ? string.Empty : _restApiSettings.Categories;
 
-            var response = await _httpClient.PostAsync(path, content, cancellationToken);
+            var response = await httpClient.PostAsync(path, content, cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {

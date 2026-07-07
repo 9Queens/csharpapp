@@ -3,8 +3,10 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using Xunit;
 using CSharpApp.Application.Categories.Queries;
 using CSharpApp.Application.Categories.Commands;
@@ -32,10 +34,13 @@ public class CategoryQueryHandlerTests
             BaseAddress = new Uri("https://api.test/")
         };
 
+        var mockFactory = new Mock<IHttpClientFactory>();
+        mockFactory.Setup(f => f.CreateClient("RestApiClient")).Returns(httpClient);
+
         var options = Options.Create(new CSharpApp.Core.Settings.RestApiSettings { Categories = "categories" });
         var logger = NullLogger<GetCategoryByIdQueryHandler>.Instance;
 
-        var queryHandler = new GetCategoryByIdQueryHandler(httpClient, options, logger);
+        var queryHandler = new GetCategoryByIdQueryHandler(mockFactory.Object, options, logger);
         var query = new GetCategoryByIdQuery(2);
 
         // Act
@@ -71,10 +76,13 @@ public class CategoryCommandHandlerTests
             BaseAddress = new Uri("https://api.test/")
         };
 
+        var mockFactory = new Mock<IHttpClientFactory>();
+        mockFactory.Setup(f => f.CreateClient("RestApiClient")).Returns(httpClient);
+
         var options = Options.Create(new CSharpApp.Core.Settings.RestApiSettings { Categories = "categories" });
         var logger = NullLogger<CreateCategoryCommandHandler>.Instance;
 
-        var commandHandler = new CreateCategoryCommandHandler(httpClient, options, logger);
+        var commandHandler = new CreateCategoryCommandHandler(mockFactory.Object, options, logger);
         var command = new CreateCategoryCommand(category);
 
         // Act
