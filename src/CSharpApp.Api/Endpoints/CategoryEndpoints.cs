@@ -2,8 +2,6 @@ using MediatR;
 using CSharpApp.Core.Dtos;
 using CSharpApp.Application.Categories.Queries;
 using CSharpApp.Application.Categories.Commands;
-using CSharpApp.Api.Validation;
-using CSharpApp.Application.Categories.Validation;
 using CSharpApp.Application.Categories.Mapping;
 using Asp.Versioning.Builder;
 
@@ -45,31 +43,29 @@ public static class CategoryEndpoints
 
     private static async Task<IResult> CreateCategory(
         IMediator mediator,
-        ICreateCategoryValidator apiCategoryValidator,
-        ICategoryValidator categoryValidator,
         ICategoryMapper mapper,
         CreateCategoryRequestDto request,
         CancellationToken ct)
     {
         if (request == null)
-            return Results.BadRequest();
+            return Results.BadRequest(new { errors = new[] { "Request cannot be null" } });
 
-        // API-level validation
-        if (!apiCategoryValidator.Validate(request, out var apiErrors))
-            return Results.BadRequest(new { errors = apiErrors });
+        try
+        {
+            var category = mapper.MapFromCreateRequest(request);
 
-        // Business validation
-        var businessValidation = categoryValidator.ValidateForCreate(request);
-        if (!businessValidation.IsValid)
-            return Results.BadRequest(new { errors = businessValidation.Errors });
+            // MediatR pipeline will automatically validate via FluentValidation behavior
+            var created = await mediator.Send(new CreateCategoryCommand(category), ct);
+            if (created == null)
+                return Results.StatusCode(StatusCodes.Status502BadGateway);
 
-        var category = mapper.MapFromCreateRequest(request);
-
-        var created = await mediator.Send(new CreateCategoryCommand(category), ct);
-        if (created == null)
-            return Results.StatusCode(StatusCodes.Status502BadGateway);
-
-        var location = $"/api/v1/categories/{created.Id}";
-        return Results.Created(location, created);
+            var location = $"/api/v1/categories/{created.Id}";
+            return Results.Created(location, created);
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            var errors = ex.Errors.Select(e => e.ErrorMessage).ToList();
+            return Results.BadRequest(new { errors });
+        }
     }
 }

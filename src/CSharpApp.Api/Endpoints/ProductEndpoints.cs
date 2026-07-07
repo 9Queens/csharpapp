@@ -2,7 +2,6 @@ using MediatR;
 using CSharpApp.Core.Dtos;
 using CSharpApp.Application.Products.Queries;
 using CSharpApp.Application.Products.Commands;
-using CSharpApp.Api.Validation;
 using CSharpApp.Application.Products;
 using Asp.Versioning.Builder;
 
@@ -47,33 +46,31 @@ public static class ProductEndpoints
 
     private static async Task<IResult> CreateProduct(
         IMediator mediator,
-        ICreateProductValidator apiValidator,
-        IProductValidator validator,
         IProductMapper mapper,
         CreateProductRequestDto request,
         HttpContext http,
         CancellationToken ct)
     {
         if (request == null)
-            return Results.BadRequest();
+            return Results.BadRequest(new { errors = new[] { "Request cannot be null" } });
 
-        // API-level validation (shape/format)
-        if (!apiValidator.Validate(request, out var apiErrors))
-            return Results.BadRequest(new { errors = apiErrors });
+        try
+        {
+            // Map request to domain product using mapper
+            var product = mapper.MapFromCreateRequest(request);
 
-        // Application/business validation
-        var validation = validator.ValidateForCreate(request);
-        if (!validation.IsValid)
-            return Results.BadRequest(new { errors = validation.Errors });
+            // MediatR pipeline will automatically validate via FluentValidation behavior
+            var created = await mediator.Send(new CreateProductCommand(product), ct);
+            if (created == null)
+                return Results.StatusCode(StatusCodes.Status502BadGateway);
 
-        // Map request to domain product using mapper
-        var product = mapper.MapFromCreateRequest(request);
-
-        var created = await mediator.Send(new CreateProductCommand(product), ct);
-        if (created == null)
-            return Results.StatusCode(StatusCodes.Status502BadGateway);
-
-        var location = $"/api/v1/products/{created.Id}";
-        return Results.Created(location, created);
+            var location = $"/api/v1/products/{created.Id}";
+            return Results.Created(location, created);
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            var errors = ex.Errors.Select(e => e.ErrorMessage).ToList();
+            return Results.BadRequest(new { errors });
+        }
     }
 }
