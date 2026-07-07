@@ -48,7 +48,6 @@ public static class ProductEndpoints
         IMediator mediator,
         IProductMapper mapper,
         CreateProductRequestDto request,
-        HttpContext http,
         CancellationToken ct)
     {
         if (request == null)

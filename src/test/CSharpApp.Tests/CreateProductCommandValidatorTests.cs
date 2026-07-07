@@ -1,9 +1,6 @@
-using System.Net.Http;
-using System.Threading;
 using System.Threading.Tasks;
 using FluentValidation;
 using Xunit;
-using Moq;
 using CSharpApp.Application.Products.Commands;
 using CSharpApp.Core.Dtos;
 

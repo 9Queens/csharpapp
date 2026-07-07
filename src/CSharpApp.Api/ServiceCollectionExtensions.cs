@@ -6,10 +6,7 @@ namespace CSharpApp.Api
     {
         public static IServiceCollection AddApiServices(this IServiceCollection services)
         {
-            // API-level validators and request/adapters
-            services.AddSingleton<Validation.ICreateProductValidator, Validation.CreateProductValidator>();
-            services.AddSingleton<Validation.ICreateCategoryValidator, Validation.CreateCategoryValidator>();
-
+            // API-level services can be registered here if needed in the future
             return services;
         }
     }
